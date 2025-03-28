@@ -1,0 +1,27 @@
+Raw DataFrame columns: ['Date', '360ONE.NS', '3MINDIA.NS', 'AARTIDRUGS.NS', 'AARTIIND.NS', 'AAVAS.NS\\n01/03/2024', '0', '0.1', '0.2', '0.3', '0\\n04/03/2024', '0.4', '0.5', '0.6', '0.7', '0\\n05/03/2024', '0.8', '0.9', '0.10', '0.11', '0\\n06/03/2024', '0.12', '0.13', '0.14', '0.15', '0.16']
+Signal DataFrame columns: ['360ONE.NS', '3MINDIA.NS', 'AARTIDRUGS.NS', 'AARTIIND.NS', 'AAVAS.NS\\n01/03/2024', '0', '0.1', '0.2', '0.3', '0\\n04/03/2024', '0.4', '0.5', '0.6', '0.7', '0\\n05/03/2024', '0.8', '0.9', '0.10', '0.11', '0\\n06/03/2024', '0.12', '0.13', '0.14', '0.15', '0.16']
+Error downloading data for 360ONE.NS: Naive time - no tzinfo set
+Error downloading data for 3MINDIA.NS: Naive time - no tzinfo set
+Error downloading data for AARTIDRUGS.NS: Naive time - no tzinfo set
+Error downloading data for AARTIIND.NS: Naive time - no tzinfo set
+Skipping invalid ticker: AAVAS.NS\n01/03/2024
+Skipping invalid ticker: 0
+Skipping invalid ticker: 0.1
+Skipping invalid ticker: 0.2
+Skipping invalid ticker: 0.3
+Skipping invalid ticker: 0\n04/03/2024
+Skipping invalid ticker: 0.4
+Skipping invalid ticker: 0.5
+Skipping invalid ticker: 0.6
+Skipping invalid ticker: 0.7
+Skipping invalid ticker: 0\n05/03/2024
+Skipping invalid ticker: 0.8
+Skipping invalid ticker: 0.9
+Skipping invalid ticker: 0.10
+Skipping invalid ticker: 0.11
+Skipping invalid ticker: 0\n06/03/2024
+Skipping invalid ticker: 0.12
+Skipping invalid ticker: 0.13
+Skipping invalid ticker: 0.14
+Skipping invalid ticker: 0.15
+Skipping invalid ticker: 0.16
