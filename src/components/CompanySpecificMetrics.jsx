@@ -19,8 +19,8 @@ const CompanySpecificMetrics = () => {
     const fetchMetrics = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`http://localhost:5001/api/signal-files/${signalFileId}`, {
-          timeout: 120000, // 120 seconds timeout (as per previous optimization)
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/signal-files/${signalFileId}`, {
+          timeout: 120000,
         });
         const formattedMetrics = Object.entries(response.data).map(([ticker, data]) => ({
           ticker,

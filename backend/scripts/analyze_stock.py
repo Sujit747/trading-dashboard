@@ -4,9 +4,9 @@ import requests
 import json
 import sys
 from datetime import datetime, timedelta
-
+import os
 # Constants
-ALPHA_VANTAGE_API_KEY = "4W5EILB0925FBMA5"  # Replace with your Alpha Vantage API key
+ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "default_key")
 
 def fetch_stock_data_alpha_vantage(symbol, period='3mo'):
     """Fetch stock data from Alpha Vantage API with error handling"""

@@ -17,7 +17,7 @@ const Analyze = () => {
 
     try {
       const response = await axios.post(
-        'http://localhost:5001/api/analyze',
+        `${import.meta.env.VITE_API_URL}/api/analyze`,
         { symbol, period },
         { timeout: 30000 }
       );

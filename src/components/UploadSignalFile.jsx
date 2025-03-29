@@ -23,10 +23,10 @@ function UploadSignalFile() {
 
       try {
         // Send the signal file to the backend to run the backtest
-        await axios.post('http://localhost:5001/api/signal-files', {
-          filename: selectedFile.name,
-          content: text,
-        });
+        await axios.post(`${import.meta.env.VITE_API_URL}/api/signal-files`, {
+            filename: selectedFile.name,
+            content: text,
+          });
 
         // Redirect to the Dashboard screen to see the updated results
         navigate('/backtest/dashboard');

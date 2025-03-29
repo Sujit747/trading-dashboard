@@ -13,9 +13,9 @@ const Dashboard = () => {
     const fetchResults = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:5001/api/backtest-results', {
-          timeout: 60000, // 60 seconds timeout
-        });
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/backtest-results`, {
+            timeout: 60000,
+          });
         // Sort results by ID in descending order (latest first)
         const sortedResults = response.data.sort((a, b) => b.id - a.id);
         setResults(sortedResults);

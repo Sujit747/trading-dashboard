@@ -1,30 +1,28 @@
+require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
-const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const util = require('util');
-const execPromise = util.promisify(exec);
+const execPromise = util.promisify(require('child_process').exec);
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
+
 const app = express();
-const port = 5001;
+
+// Load environment variables
+const pythonPath = process.env.PYTHON_PATH;
+const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(cors());
-// Increase the size limit for JSON payloads to 50MB (adjust as needed)
 app.use(express.json({ limit: '50mb' }));
 
 // PostgreSQL connection
 const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'trading_dashboard',
-  password: 'sujit', // Replace with your PostgreSQL password
-  port: 5432,
+  connectionString: process.env.DATABASE_URL,
 });
-
-// Path to the virtual environment's Python executable
-const pythonPath = '/Users/sujit/Downloads/my-new-project/venv/bin/python3';
 
 // Test the database connection
 pool.connect((err) => {
@@ -57,57 +55,45 @@ app.post('/api/signal-files', async (req, res) => {
     fs.writeFileSync(tempFilePath, signalFile.content);
 
     // Run the backtest.py script using the virtual environment's Python
-    exec(`${pythonPath} ${path.join(__dirname, 'scripts', 'backtest.py')} ${tempFilePath}`, (error, stdout, stderr) => {
-      // Clean up the temporary file
-      fs.unlinkSync(tempFilePath);
+    const command = `${pythonPath} ${path.join(__dirname, 'scripts', 'backtest.py')} ${tempFilePath}`;
+    const { stdout, stderr } = await execPromise(command);
 
-      if (error) {
-        console.error('Error running backtest.py:', error);
-        console.error('backtest.py stderr:', stderr);
-        return res.status(500).json({ error: 'Failed to run backtest' });
+    // Clean up the temporary file
+    fs.unlinkSync(tempFilePath);
+
+    if (stderr) {
+      console.error('backtest.py stderr:', stderr);
+    }
+
+    try {
+      const metrics = JSON.parse(stdout);
+      console.log('Debug: Metrics from backtest.py:', metrics); // Debug log
+      if (metrics.error) {
+        return res.status(500).json({ error: metrics.error });
       }
 
-      // Log stderr for debugging
-      if (stderr) {
-        console.log('backtest.py stderr:', stderr);
-      }
-
-      try {
-        const metrics = JSON.parse(stdout);
-        console.log('Debug: Metrics from backtest.py:', metrics); // Debug log
-        if (metrics.error) {
-          return res.status(500).json({ error: metrics.error });
-        }
-
-        // Save the backtest results to the database, including beta
-        pool.query(
-          'INSERT INTO backtest_results (signal_file_id, filename, win_rate, risk_reward_ratio, max_losing_streak, sharpe_ratio, std_dev, skewness, beta) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
-          [
-            signalFile.id,
-            filename,
-            metrics.win_rate,
-            metrics.risk_reward_ratio,
-            metrics.max_losing_streak,
-            metrics.sharpe_ratio,
-            metrics.std_dev,
-            metrics.skewness,
-            metrics.beta || 0, // Default to 0 if beta is undefined
-          ],
-          (err, result) => {
-            if (err) {
-              console.error('Error saving backtest result:', err);
-              return res.status(500).json({ error: 'Failed to save backtest result' });
-            }
-            console.log('Debug: Saved backtest result:', result.rows[0]); // Debug log
-            res.status(201).json(result.rows[0]);
-          }
-        );
-      } catch (parseError) {
-        console.error('Error parsing backtest.py output:', parseError);
-        console.error('backtest.py stdout:', stdout);
-        res.status(500).json({ error: 'Failed to parse backtest results' });
-      }
-    });
+      // Save the backtest results to the database, including beta
+      const result = await pool.query(
+        'INSERT INTO backtest_results (signal_file_id, filename, win_rate, risk_reward_ratio, max_losing_streak, sharpe_ratio, std_dev, skewness, beta) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+        [
+          signalFile.id,
+          filename,
+          metrics.win_rate,
+          metrics.risk_reward_ratio,
+          metrics.max_losing_streak,
+          metrics.sharpe_ratio,
+          metrics.std_dev,
+          metrics.skewness,
+          metrics.beta || 0, // Default to 0 if beta is undefined
+        ]
+      );
+      console.log('Debug: Saved backtest result:', result.rows[0]); // Debug log
+      res.status(201).json(result.rows[0]);
+    } catch (parseError) {
+      console.error('Error parsing backtest.py output:', parseError);
+      console.error('backtest.py stdout:', stdout);
+      res.status(500).json({ error: 'Failed to parse backtest results' });
+    }
   } catch (error) {
     console.error('Error saving signal file:', error);
     res.status(500).json({ error: 'Failed to save signal file' });
@@ -135,22 +121,13 @@ app.get('/api/signal-files/:id', async (req, res) => {
       return res.status(404).json({ error: 'Signal file not found' });
     }
 
-    const { execSync } = require('child_process');
-    try {
-      const pingResult = execSync('ping -c 1 finance.yahoo.com').toString();
-      console.log('Ping result:', pingResult);
-    } catch (pingError) {
-      console.error('Ping failed:', pingError.message);
-    }
-
     const signalContent = rows[0].content;
     const tempFilePath = `/tmp/signal_file_${id}.csv`;
     console.log('Signal file content:', signalContent);
     // Ensure proper newline handling
-    require('fs').writeFileSync(tempFilePath, signalContent, { encoding: 'utf8', flag: 'w' });
+    fs.writeFileSync(tempFilePath, signalContent, { encoding: 'utf8', flag: 'w' });
 
-    const pythonPath = '/Users/sujit/Downloads/my-new-project/venv/bin/python3';
-    const scriptPath = '/Users/sujit/Downloads/my-new-project/backend/scripts/company_metrics.py';
+    const scriptPath = path.join(__dirname, 'scripts', 'company_metrics.py');
     const command = `${pythonPath} ${scriptPath} ${tempFilePath}`;
     console.log('Executing command:', command);
     const { stdout, stderr } = await execPromise(command);
@@ -223,7 +200,39 @@ app.post('/api/analyze', async (req, res) => {
   }
 });
 
+// New endpoint for generating signals (for GenerateSignals.jsx)
+app.post('/api/screener/generate-signals', upload.fields([
+  { name: 'entryFile', maxCount: 1 },
+  { name: 'exitFile', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    const entryFilePath = req.files['entryFile'][0].path;
+    const exitFilePath = req.files['exitFile'][0].path;
+
+    const command = `${pythonPath} ${path.join(__dirname, 'scripts', 'generate_signals.py')} ${entryFilePath} ${exitFilePath}`;
+    const { stdout, stderr } = await execPromise(command);
+
+    if (stderr) {
+      console.error('Python script stderr:', stderr);
+    }
+
+    const result = JSON.parse(stdout);
+    if (result.error) {
+      return res.status(500).json({ error: result.error });
+    }
+
+    // Clean up uploaded files
+    fs.unlinkSync(entryFilePath);
+    fs.unlinkSync(exitFilePath);
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error generating signals:', error);
+    res.status(500).json({ error: 'Failed to generate signals' });
+  }
+});
+
 // Start the server
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
